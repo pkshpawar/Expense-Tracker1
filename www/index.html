@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Personal Expense Tracker</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f3;--card:#fff;--ink:#12302b;--mut:#5d7570;--line:#d5dfdd;--inc:#1f8a5b;--exp:#d4502d;--acc:#12302b;--onacc:#fff}
+:root:not([data-theme="light"]){}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a18;--card:#162623;--ink:#e6f0ee;--mut:#8fa8a3;--line:#274039;--inc:#4fd09a;--exp:#ff8a65;--acc:#e6f0ee;--onacc:#0e1a18}}
+:root[data-theme="dark"]{--bg:#0e1a18;--card:#162623;--ink:#e6f0ee;--mut:#8fa8a3;--line:#274039;--inc:#4fd09a;--exp:#ff8a65;--acc:#e6f0ee;--onacc:#0e1a18}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:560px;margin:auto;padding:0 14px 90px}
+h1,h2{margin:0;font-weight:700}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 0 8px}
+header h1{font-size:19px}header small{color:var(--mut);display:block}
+button,select,input{font:inherit;color:var(--ink)}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}
+.mon{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mon b{text-align:center;flex:1}
+.tot{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.tot div{border-left:3px solid var(--line);padding-left:8px}
+.tot span{display:block;color:var(--mut);font-size:12px}.tot strong{font-size:17px}
+.i{border-color:var(--inc)!important}.e{border-color:var(--exp)!important}
+.pos{color:var(--inc)}.neg{color:var(--exp)}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.acts button{border:0;border-radius:12px;padding:14px;font-weight:700;font-size:16px;cursor:pointer;color:#fff}
+#bi{background:var(--inc)}#be{background:var(--exp)}
+:root[data-theme="dark"] .acts button,@media(prefers-color-scheme:dark){}
+svg text{fill:var(--mut);font-size:10px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mut);margin-top:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.tx{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.tx:first-child{border-top:0}.tx small{color:var(--mut);display:block}
+.tx button{border:0;background:none;color:var(--mut);cursor:pointer;font-size:12px;padding:0}
+.amt{text-align:right;white-space:nowrap;font-weight:700}
+.modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-end;justify-content:center;z-index:9}
+.modal.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:92%;overflow:auto}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 3px}
+.sheet select,.sheet input,.rep input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.go{width:100%;margin-top:16px;padding:13px;border:0;border-radius:10px;background:var(--acc);color:var(--onacc);font-weight:700;cursor:pointer}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}.tbl td,.tbl th{padding:5px 4px;text-align:left}.tbl td:last-child,.tbl th:last-child{text-align:right}
+.tbl tr.sub td{color:var(--mut);padding-left:14px}.tbl tr.cat td{font-weight:700;border-top:1px solid var(--line)}
+.empty{color:var(--mut);padding:8px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips b{flex-basis:100%;font-size:11px;color:var(--mut);font-weight:600;margin-top:4px}
+.chips button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 9px;font-size:13px;cursor:pointer}
+.chips button.on{background:var(--acc);color:var(--onacc);border-color:var(--acc)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;max-width:560px;margin:auto;font-weight:700;z-index:5}
+#bb.neg,#tb.neg{color:#e11d1d}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--inc);outline-offset:2px}
+</style></head><body>
+<header><div><h1 id="fam">Family</h1><small>Personal Expense Tracker</small></div><button class="ghost" id="ren">Edit name</button></header>
+
+<div class="card">
+ <div class="mon"><button class="ghost" id="pv" aria-label="Previous month">‹</button><b id="rng"></b><button class="ghost" id="nx" aria-label="Next month">›</button></div>
+ <div class="tot"><div class="i"><span>Income</span><strong id="ti"></strong></div><div class="e"><span>Expense</span><strong id="te"></strong></div><div><span>Balance</span><strong id="tb"></strong></div></div>
+</div>
+<div class="card"><h2 style="font-size:14px;margin-bottom:6px" id="gt"></h2><div id="chart"></div>
+ <div class="legend"><span><i style="background:var(--inc)"></i>Income</span><span><i style="background:var(--exp)"></i>Expense</span><span>Tap a month to open it</span></div></div>
+<div class="acts"><button id="bi">+ Income</button><button id="be">+ Expense</button></div>
+<div class="card"><h2 style="font-size:14px;margin-bottom:6px">Entries this month</h2><div id="list"></div></div>
+<div class="card rep"><h2 style="font-size:14px">Make report</h2>
+ <div class="row"><div><label>From</label><input type="date" id="rf"></div><div><label>To</label><input type="date" id="rt"></div></div>
+ <button class="go" id="mk">Make report</button><div id="rout"></div></div>
+
+<div class="bar"><span>Balance (this month)</span><span id="bb"></span></div>
+<div class="modal" id="md"><div class="sheet">
+ <h2 id="mt"></h2>
+ <label>Date</label><input type="date" id="fd">
+ <label id="lc">Category</label><div class="chips" id="fc"></div>
+ <div id="sw"><label>Sub-category</label><div class="chips" id="fs"></div></div>
+ <label>Payment option</label><div class="chips" id="fp"></div>
+ <label>Amount (₹)</label><input type="number" id="fa" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+ <label>Note (optional)</label><input id="fn" maxlength="80">
+ <button class="go" id="sv">Save</button><button class="go" id="cl" style="background:none;color:var(--ink);border:1px solid var(--line);margin-top:8px">Cancel</button>
+</div></div>
+
+<script src="xlsx.full.min.js"></script>
+<script>
+const EXP={"Children":["Extracurricular activities","Medical","School/College supplies","School/College tuition"],
+"Food":["Dining out","Groceries","Orders"],
+"Gifts and charity":["Charity 1","Charity 2","Gift 1","Gift 2"],
+"Housing":["Cable/satellite","Electric bill","Gas","House cleaning service","Maintenance","Mortgage/rent","Natural gas/oil","Internet service","Phone (cell) - Self","Phone (cell) - Wife","Phone (cell) - Child 1","Phone (cell) - Child 2","Supplies","Waste removal and recycle","Water and sewer"],
+"Insurance":["Health","Home","Life"],
+"Loans":["Credit Card 1","Credit Card 2","Credit Card 3","Personal","Borrowed return","Student"],
+"Personal care":["Clothing","Dry cleaning","Hair/nails","Health club","Medical"],
+"Savings":["Investment account","Retirement account"],
+"Transportation":["#Public Transport","Bus","Train","Metro","#Personal Transport","Auto","Taxi","Other","#Auto expenses","Fuel","Insurance","Licensing","Maintenance","Parking fees","Vehicle payment"],
+"Pets":["Food","Grooming","Medical","Toys"]};
+const INC=["Previous Balance","Salary","Bonus","Borrow","Other"];
+const PAY=["Cash","Cheque","UPI","Credit Card - ICICI","Credit Card - SBI","Online - ICICI","Online - SBI","Other"];
+const $=id=>document.getElementById(id),M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let data=ld("ext_data",[]),fam=ld("ext_fam",""),cur=new Date(),type="E";cur.setDate(1);
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const inr=n=>"₹"+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtD=s=>{const[y,m,d]=s.split("-");return +d+" "+M[m-1]+" "+y};
+function sums(list){let i=0,e=0;list.forEach(t=>t.t=="I"?i+=t.a:e+=t.a);return{i,e}}
+function render(){
+ $("fam").textContent=(fam||"Family")+(fam?"'s family":"");
+ const y=cur.getFullYear(),m=cur.getMonth(),last=new Date(y,m+1,0).getDate(),pre=y+"-"+String(m+1).padStart(2,"0");
+ $("rng").textContent="1st "+M[m]+" to "+last+(last==1?"":"")+" "+M[m]+" "+y;
+ const ml=data.filter(t=>t.d.startsWith(pre)),s=sums(ml);
+ $("ti").textContent=inr(s.i);$("te").textContent=inr(s.e);
+ $("tb").textContent=inr(s.i-s.e);$("tb").className=s.i-s.e>=0?"pos":"neg";$("bb").textContent=inr(s.i-s.e);$("bb").className=s.i-s.e>=0?"pos":"neg";
+ $("gt").textContent="Month-wise income and expense, "+y;
+ const mm=[];for(let k=0;k<12;k++)mm.push(sums(data.filter(t=>t.d.startsWith(y+"-"+String(k+1).padStart(2,"0")))));
+ const mx=Math.max(1,...mm.map(x=>Math.max(x.i,x.e)));let g="";
+ mm.forEach((x,k)=>{const X=8+k*27,hi=x.i/mx*110,he=x.e/mx*110;
+  g+=`<g data-m="${k}" style="cursor:pointer"><rect x="${X-4}" y="0" width="27" height="150" fill="${k==m?"var(--line)":"transparent"}" opacity=".5"/><rect x="${X}" y="${125-hi}" width="9" height="${hi}" rx="1.5" fill="var(--inc)"/><rect x="${X+10}" y="${125-he}" width="9" height="${he}" rx="1.5" fill="var(--exp)"/><text x="${X+9.5}" y="142" text-anchor="middle">${M[k]}</text></g>`});
+ $("chart").innerHTML=`<svg viewBox="0 0 332 150" width="100%" role="img" aria-label="Monthly income and expense bars"><line x1="0" y1="125" x2="332" y2="125" stroke="var(--line)"/>${g}</svg>`;
+ $("chart").querySelectorAll("g").forEach(el=>el.onclick=()=>{cur.setMonth(+el.dataset.m);render()});
+ ml.sort((a,b)=>b.d.localeCompare(a.d)||b.id-a.id);
+ $("list").innerHTML=ml.length?ml.map(t=>`<div class="tx"><div>${esc(t.c)}${t.s?" › "+esc(t.s):""}<small>${fmtD(t.d)}${t.n?" · "+esc(t.n):""}</small></div><div><div class="amt ${t.t=="I"?"pos":"neg"}">${t.t=="I"?"+":"−"}${inr(t.a)}</div><button data-d="${t.id}">Delete</button></div></div>`).join(""):'<div class="empty">No entries this month. Tap + Income or + Expense to add one.</div>';
+ $("list").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(confirm("Delete this entry?")){data=data.filter(t=>t.id!=b.dataset.d);sv("ext_data",data);render()}});
+}
+const chips=(el,arr,sel,cb)=>{el.dataset.v=sel||"";el.innerHTML=arr.map(x=>x[0]=="#"?`<b>${esc(x.slice(1))}</b>`:`<button type="button" class="${x==sel?"on":""}">${esc(x)}</button>`).join("");el.querySelectorAll("button").forEach(b=>b.onclick=()=>{el.dataset.v=b.textContent;el.querySelectorAll("button").forEach(c=>c.classList.toggle("on",c==b));if(cb)cb()})};
+function openM(t){type=t;$("mt").textContent=t=="I"?"Add income":"Add expense";
+ $("lc").textContent=t=="I"?"Income type":"Expense category";
+ const cl=t=="I"?INC:Object.keys(EXP);chips($("fc"),cl,cl[0],subs);$("sw").style.display=t=="I"?"none":"block";
+ chips($("fp"),PAY,PAY[0]);$("fd").value=iso(new Date());$("fa").value="";$("fn").value="";subs();$("md").classList.add("on")}
+function subs(){if(type=="E"){const l=EXP[$("fc").dataset.v];chips($("fs"),l,l.find(x=>x[0]!="#"))}}
+$("bi").onclick=()=>openM("I");$("be").onclick=()=>openM("E");
+$("cl").onclick=()=>$("md").classList.remove("on");
+$("sv").onclick=()=>{const a=parseFloat($("fa").value);if(!(a>0)){$("fa").focus();return}
+ if(!$("fd").value){$("fd").focus();return}
+ data.push({id:Date.now(),t:type,d:$("fd").value,c:$("fc").dataset.v,s:type=="E"?$("fs").dataset.v:"",p:$("fp").dataset.v,a,n:$("fn").value.trim()});
+ sv("ext_data",data);const d=new Date($("fd").value+"T00:00");cur=new Date(d.getFullYear(),d.getMonth(),1);$("md").classList.remove("on");render()};
+$("pv").onclick=()=>{cur.setMonth(cur.getMonth()-1);render()};$("nx").onclick=()=>{cur.setMonth(cur.getMonth()+1);render()};
+$("ren").onclick=()=>{const n=prompt("Name of user (family head):",fam);if(n!==null){fam=n.trim();sv("ext_fam",fam);render()}};
+let rep=null;
+$("mk").onclick=()=>{const f=$("rf").value,t=$("rt").value;if(!f||!t||f>t){$("rout").innerHTML='<div class="empty">Choose a start date that is on or before the end date.</div>';return}
+ const L=data.filter(x=>x.d>=f&&x.d<=t).sort((a,b)=>a.d.localeCompare(b.d)),s=sums(L);
+ const cat={},pay={};L.forEach(x=>{if(x.t=="E"){(cat[x.c]=cat[x.c]||{a:0,s:{}}).a+=x.a;cat[x.c].s[x.s]=(cat[x.c].s[x.s]||0)+x.a}pay[x.p]=pay[x.p]||{i:0,e:0};pay[x.p][x.t=="I"?"i":"e"]+=x.a});
+ const inc={};L.filter(x=>x.t=="I").forEach(x=>inc[x.c]=(inc[x.c]||0)+x.a);
+ rep={f,t,L,s,cat,pay,inc};
+ let h=`<p style="margin:10px 0 4px"><b>${fmtD(f)} to ${fmtD(t)}</b></p><table class="tbl"><tr><td>Income</td><td class="pos">${inr(s.i)}</td></tr><tr><td>Expense</td><td class="neg">${inr(s.e)}</td></tr><tr><td><b>Balance</b></td><td><b>${inr(s.i-s.e)}</b></td></tr></table>`;
+ h+=`<p style="margin:12px 0 2px"><b>Expense by category</b></p><table class="tbl">`;
+ Object.keys(cat).forEach(c=>{h+=`<tr class="cat"><td>${esc(c)}</td><td>${inr(cat[c].a)}</td></tr>`;Object.keys(cat[c].s).forEach(k=>h+=`<tr class="sub"><td>${esc(k)}</td><td>${inr(cat[c].s[k])}</td></tr>`)});
+ if(!Object.keys(cat).length)h+=`<tr><td colspan=2 class="empty">No expenses in this range.</td></tr>`;
+ h+=`</table><p style="margin:12px 0 2px"><b>Income by type</b></p><table class="tbl">`+(Object.keys(inc).map(k=>`<tr><td>${esc(k)}</td><td>${inr(inc[k])}</td></tr>`).join("")||`<tr><td colspan=2 class="empty">No income in this range.</td></tr>`)+`</table>`;
+ h+=`<button class="go" id="xl">Export to Excel</button><div id="xm" class="empty"></div>`;
+ $("rout").innerHTML=h;$("xl").onclick=exportXl};
+async function exportXl(){
+ const r=rep;if(!r)return;const w=XLSX.utils.book_new();
+ const S=[["Personal Expense Tracker"],["User (Family Head)",fam],["Period",fmtD(r.f)+" to "+fmtD(r.t)],[],["Total income",r.s.i],["Total expense",r.s.e],["Balance",r.s.i-r.s.e],[],["Expense category","Sub-category","Amount"]];
+ Object.keys(r.cat).forEach(c=>{S.push([c,"",r.cat[c].a]);Object.keys(r.cat[c].s).forEach(k=>S.push(["",k,r.cat[c].s[k]]))});
+ S.push([],["Income type","","Amount"]);Object.keys(r.inc).forEach(k=>S.push([k,"",r.inc[k]]));
+ S.push([],["Payment option","Income","Expense"]);Object.keys(r.pay).forEach(k=>S.push([k,r.pay[k].i,r.pay[k].e]));
+ const ws=XLSX.utils.aoa_to_sheet(S);ws["!cols"]=[{wch:26},{wch:26},{wch:16}];XLSX.utils.book_append_sheet(w,ws,"Summary");
+ const T=[["Date","Type","Category","Sub-category","Payment option","Amount","Note"]].concat(r.L.map(x=>[x.d,x.t=="I"?"Income":"Expense",x.c,x.s,x.p,x.a,x.n]));
+ const w2=XLSX.utils.aoa_to_sheet(T);w2["!cols"]=[{wch:12},{wch:9},{wch:22},{wch:26},{wch:20},{wch:12},{wch:30}];XLSX.utils.book_append_sheet(w,w2,"Transactions");
+ const buf=XLSX.write(w,{type:"array",bookType:"xlsx"});
+ const fn="expense-report-"+r.f+"-to-"+r.t+".xlsx";
+ try{const P=window.Capacitor&&Capacitor.Plugins;
+  if(P&&P.Filesystem){const b64=XLSX.write(w,{type:"base64",bookType:"xlsx"});let f=null,where="";
+   for(const dir of ["DOCUMENTS","EXTERNAL","CACHE"]){try{f=await P.Filesystem.writeFile({path:dir=="DOCUMENTS"?"ExpenseTracker/"+fn:fn,data:b64,directory:dir,recursive:true});where=dir;break}catch(e){}}
+   if(!f)throw 0;
+   const pth=decodeURIComponent(f.uri.replace("file://",""));
+   $("xm").style.wordBreak="break-all";$("xm").innerHTML="Saved to:<br><b>"+esc(pth)+"</b>"+(where=="CACHE"?"<br>(temporary file - use Share to keep it)":"");
+   if(P.Share){try{await P.Share.share({title:fn,url:f.uri,dialogTitle:"Open, save or share report"})}catch(e){}}}
+  else{const bl=new Blob([buf],{type:"application/octet-stream"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=fn;document.body.appendChild(a);a.click();a.remove();$("xm").textContent="Downloaded. Check your browser's Downloads folder: "+fn}}
+ catch(e){$("xm").textContent="Could not save the file. Try again."}}
+const td=iso(new Date());$("rf").value=iso(new Date(cur.getFullYear(),cur.getMonth(),1));$("rt").value=td;
+render();if(!fam)setTimeout(()=>$("ren").click(),300);
+</script></body></html>
