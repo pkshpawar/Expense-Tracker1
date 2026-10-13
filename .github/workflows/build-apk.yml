@@ -1,0 +1,52 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Prepare web folder and add Excel library
+        run: |
+          if [ -f www ]; then mv www /tmp/www_file; mkdir www; mv /tmp/www_file www/index.html; fi
+          mkdir -p www
+          if [ ! -f www/index.html ] && [ -f index.html ]; then cp index.html www/index.html; fi
+          test -f www/index.html || { echo "index.html not found. Put it inside a folder named www"; exit 1; }
+          cp node_modules/xlsx/dist/xlsx.full.min.js www/
+
+      - name: Create Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Apply app icon
+        run: cp -r android-res/* android/app/src/main/res/
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: ExpenseTracker-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
