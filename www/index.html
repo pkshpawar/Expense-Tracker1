@@ -51,7 +51,7 @@ label{display:block;font-size:12px;color:var(--mut);margin:10px 0 3px}
 #bb.neg,#tb.neg{color:#e11d1d}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--inc);outline-offset:2px}
 </style></head><body>
-<header><div><h1 id="fam">Family</h1><small>Personal Expense Tracker</small></div><button class="ghost" id="ren">Edit name</button></header>
+<header><div><h1 id="fam">Family</h1><small>Personal Expense Tracker</small></div><div><button class="ghost" id="ren">Edit name</button> <button class="ghost" id="ex">Exit</button></div></header>
 
 <div class="card">
  <div class="mon"><button class="ghost" id="pv" aria-label="Previous month">‹</button><b id="rng"></b><button class="ghost" id="nx" aria-label="Next month">›</button></div>
@@ -65,6 +65,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
  <div class="row"><div><label>From</label><input type="date" id="rf"></div><div><label>To</label><input type="date" id="rt"></div></div>
  <button class="go" id="mk">Make report</button><div id="rout"></div></div>
 
+<footer style="text-align:center;color:var(--mut);font-size:12px;padding:14px 0 0">@ Prakash Pawar</footer>
 <div class="bar"><span>Balance (this month)</span><span id="bb"></span></div>
 <div class="modal" id="md"><div class="sheet">
  <h2 id="mt"></h2>
@@ -87,7 +88,7 @@ const EXP={"Children":["Extracurricular activities","Medical","School/College su
 "Loans":["Credit Card 1","Credit Card 2","Credit Card 3","Personal","Borrowed return","Student"],
 "Personal care":["Clothing","Dry cleaning","Hair/nails","Health club","Medical"],
 "Savings":["Investment account","Retirement account"],
-"Transportation":["#Public Transport","Bus","Train","Metro","#Personal Transport","Auto","Taxi","Other","#Auto expenses","Fuel","Insurance","Licensing","Maintenance","Parking fees","Vehicle payment"],
+"Transportation":["#Public Transport","Bus","Train","Metro","#Ferry","Ajanta","Maldar","PNP","MTM","#Personal Transport","Auto","Taxi","Car/Bike","Other","#Other Expenses","Fuel","Insurance","Licensing","Maintenance","Parking fees","Vehicle payment","Other"],
 "Pets":["Food","Grooming","Medical","Toys"]};
 const INC=["Previous Balance","Salary","Bonus","Borrow","Other"];
 const PAY=["Cash","Cheque","UPI","Credit Card - ICICI","Credit Card - SBI","Online - ICICI","Online - SBI","Other"];
@@ -132,6 +133,7 @@ $("sv").onclick=()=>{const a=parseFloat($("fa").value);if(!(a>0)){$("fa").focus(
  sv("ext_data",data);const d=new Date($("fd").value+"T00:00");cur=new Date(d.getFullYear(),d.getMonth(),1);$("md").classList.remove("on");render()};
 $("pv").onclick=()=>{cur.setMonth(cur.getMonth()-1);render()};$("nx").onclick=()=>{cur.setMonth(cur.getMonth()+1);render()};
 $("ren").onclick=()=>{const n=prompt("Name of user (family head):",fam);if(n!==null){fam=n.trim();sv("ext_fam",fam);render()}};
+$("ex").onclick=()=>{if(!confirm("Exit the app?"))return;const P=window.Capacitor&&Capacitor.Plugins;if(P&&P.App){P.App.exitApp()}else{window.close();setTimeout(()=>alert("Close this tab to exit."),300)}};
 let rep=null;
 $("mk").onclick=()=>{const f=$("rf").value,t=$("rt").value;if(!f||!t||f>t){$("rout").innerHTML='<div class="empty">Choose a start date that is on or before the end date.</div>';return}
  const L=data.filter(x=>x.d>=f&&x.d<=t).sort((a,b)=>a.d.localeCompare(b.d)),s=sums(L);
