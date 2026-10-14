@@ -65,7 +65,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
  <div class="row"><div><label>From</label><input type="date" id="rf"></div><div><label>To</label><input type="date" id="rt"></div></div>
  <button class="go" id="mk">Make report</button><div id="rout"></div></div>
 
-<footer style="text-align:center;color:var(--mut);font-size:12px;padding:14px 0 0">@ Prakash Pawar</footer>
+<footer style="text-align:center;color:var(--mut);font-size:12px;padding:14px 0 0">@Prakash Pawar Ver. 1.1</footer>
 <div class="bar"><span>Balance (this month)</span><span id="bb"></span></div>
 <div class="modal" id="md"><div class="sheet">
  <h2 id="mt"></h2>
@@ -81,15 +81,16 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 <script src="xlsx.full.min.js"></script>
 <script>
 const EXP={"Children":["Extracurricular activities","Medical","School/College supplies","School/College tuition"],
-"Food":["Dining out","Groceries","Orders"],
+"Food":["Dining out","Groceries","Orders","Other"],
 "Gifts and charity":["Charity 1","Charity 2","Gift 1","Gift 2"],
-"Housing":["Cable/satellite","Electric bill","Gas","House cleaning service","Maintenance","Mortgage/rent","Natural gas/oil","Internet service","Phone (cell) - Self","Phone (cell) - Wife","Phone (cell) - Child 1","Phone (cell) - Child 2","Supplies","Waste removal and recycle","Water and sewer"],
-"Insurance":["Health","Home","Life"],
+"Housing":["Cable/satellite","Electric bill","Gas","House cleaning service","Maintenance","Mortgage/rent","Natural gas/oil","Internet service","Phone (cell) - Self","Phone (cell) - Wife","Phone (cell) - Child 1","Phone (cell) - Child 2","Supplies","Waste removal and recycle","Water and sewer","Other"],
+"Insurance":["Health","Home","Life","Other"],
 "Loans":["Credit Card 1","Credit Card 2","Credit Card 3","Personal","Borrowed return","Student"],
-"Personal care":["Clothing","Dry cleaning","Hair/nails","Health club","Medical"],
-"Savings":["Investment account","Retirement account"],
+"Personal care":["Clothing","Dry cleaning","Hair/nails","Health club","Medical","Other"],
+"Savings":["Investment account","Retirement account","Other"],
 "Transportation":["#Public Transport","Bus","Train","Metro","#Ferry","Ajanta","Maldar","PNP","MTM","#Personal Transport","Auto","Taxi","Car/Bike","Other","#Other Expenses","Fuel","Insurance","Licensing","Maintenance","Parking fees","Vehicle payment","Other"],
-"Pets":["Food","Grooming","Medical","Toys"]};
+"Pets":["Food","Grooming","Medical","Toys"],
+"Other":["Other"]};
 const INC=["Previous Balance","Salary","Bonus","Borrow","Other"];
 const PAY=["Cash","Cheque","UPI","Credit Card - ICICI","Credit Card - SBI","Online - ICICI","Online - SBI","Other"];
 const $=id=>document.getElementById(id),M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
