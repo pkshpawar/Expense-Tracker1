@@ -65,7 +65,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
  <div class="row"><div><label>From</label><input type="date" id="rf"></div><div><label>To</label><input type="date" id="rt"></div></div>
  <button class="go" id="mk">Make report</button><div id="rout"></div></div>
 
-<footer style="text-align:center;color:var(--mut);font-size:12px;padding:14px 0 0">@Prakash Pawar Ver. 1.1</footer>
+<footer style="text-align:center;color:var(--mut);font-size:12px;padding:14px 0 0">@ Prakash Pawar Ver 1.2</footer>
 <div class="bar"><span>Balance (this month)</span><span id="bb"></span></div>
 <div class="modal" id="md"><div class="sheet">
  <h2 id="mt"></h2>
@@ -87,12 +87,13 @@ const EXP={"Children":["Extracurricular activities","Medical","School/College su
 "Insurance":["Health","Home","Life","Other"],
 "Loans":["Credit Card 1","Credit Card 2","Credit Card 3","Personal","Borrowed return","Student"],
 "Personal care":["Clothing","Dry cleaning","Hair/nails","Health club","Medical","Other"],
-"Savings":["Investment account","Retirement account","Other"],
-"Transportation":["#Public Transport","Bus","Train","Metro","#Ferry","Ajanta","Maldar","PNP","MTM","#Personal Transport","Auto","Taxi","Car/Bike","Other","#Other Expenses","Fuel","Insurance","Licensing","Maintenance","Parking fees","Vehicle payment","Other"],
+"Savings":["PPF","NPS","FD","RD","Equity","Mutual Fund","Other"],
+"Transportation":["#Public Transport","Bus","Train","Metro","Ferry","#Personal Transport","Auto","Taxi","Car/Bike","Other","#Other Expenses","Fuel","Insurance","Licensing","Maintenance","Parking fees","Vehicle payment","Other"],
 "Pets":["Food","Grooming","Medical","Toys"],
 "Other":["Other"]};
+const SUB3={"Ferry":["Ajanta","Maldar","PNP","MTM"]};
 const INC=["Previous Balance","Salary","Bonus","Borrow","Other"];
-const PAY=["Cash","Cheque","UPI","Credit Card - ICICI","Credit Card - SBI","Online - ICICI","Online - SBI","Other"];
+const PAY=["Cash","Cheque","UPI","Credit Card","Online","Other"];
 const $=id=>document.getElementById(id),M=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
 const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
@@ -125,12 +126,16 @@ function openM(t){type=t;$("mt").textContent=t=="I"?"Add income":"Add expense";
  $("lc").textContent=t=="I"?"Income type":"Expense category";
  const cl=t=="I"?INC:Object.keys(EXP);chips($("fc"),cl,cl[0],subs);$("sw").style.display=t=="I"?"none":"block";
  chips($("fp"),PAY,PAY[0]);$("fd").value=iso(new Date());$("fa").value="";$("fn").value="";subs();$("md").classList.add("on")}
-function subs(){if(type=="E"){const l=EXP[$("fc").dataset.v];chips($("fs"),l,l.find(x=>x[0]!="#"))}}
+function subs(){if(type=="E"){const l=EXP[$("fc").dataset.v];chips($("fs"),l,l.find(x=>x[0]!="#"),subs2);subs2()}}
+function subs2(){const f=$("fs");let x=f.querySelector("#fs2");if(x)x.remove();const l=SUB3[f.dataset.v];if(!l)return;
+ x=document.createElement("div");x.id="fs2";x.className="chips";x.style.cssText="flex-basis:100%;margin:2px 0 4px 10px";
+ const h=[...f.querySelectorAll("b")].find(b=>b.textContent=="Other Expenses");h?f.insertBefore(x,h):f.appendChild(x);
+ chips(x,["#Ferry type"].concat(l),l[0])}
 $("bi").onclick=()=>openM("I");$("be").onclick=()=>openM("E");
 $("cl").onclick=()=>$("md").classList.remove("on");
 $("sv").onclick=()=>{const a=parseFloat($("fa").value);if(!(a>0)){$("fa").focus();return}
  if(!$("fd").value){$("fd").focus();return}
- data.push({id:Date.now(),t:type,d:$("fd").value,c:$("fc").dataset.v,s:type=="E"?$("fs").dataset.v:"",p:$("fp").dataset.v,a,n:$("fn").value.trim()});
+ data.push({id:Date.now(),t:type,d:$("fd").value,c:$("fc").dataset.v,s:type=="E"?$("fs").dataset.v+(SUB3[$("fs").dataset.v]?" - "+$("fs2").dataset.v:""):"",p:$("fp").dataset.v,a,n:$("fn").value.trim()});
  sv("ext_data",data);const d=new Date($("fd").value+"T00:00");cur=new Date(d.getFullYear(),d.getMonth(),1);$("md").classList.remove("on");render()};
 $("pv").onclick=()=>{cur.setMonth(cur.getMonth()-1);render()};$("nx").onclick=()=>{cur.setMonth(cur.getMonth()+1);render()};
 $("ren").onclick=()=>{const n=prompt("Name of user (family head):",fam);if(n!==null){fam=n.trim();sv("ext_fam",fam);render()}};
