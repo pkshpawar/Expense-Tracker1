@@ -72,6 +72,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
  <div class="row" style="margin-top:8px"><button class="go" id="bx" style="margin-top:0">Export month</button><button class="go" id="ba" style="margin-top:0">Export all</button></div>
  <button class="go" id="bimp" style="background:none;color:var(--ink);border:1px solid var(--line)">Import from Excel</button>
  <input type="file" id="bf" accept=".xlsx,.xls" hidden><div id="bmsg" class="empty" style="word-break:break-all"></div></div>
+<div id="tn" style="position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);background:var(--acc);color:var(--onacc);padding:8px 14px;border-radius:8px;font-size:13px;z-index:30;display:none;max-width:92%;word-break:break-all;box-shadow:0 2px 10px #0006"></div>
 <div class="modal" id="em"><div class="sheet" style="min-height:60%"><div class="mon"><h2 id="et" style="font-size:15px"></h2><button class="ghost" id="ec">Close</button></div><div id="list" style="margin-top:6px"></div></div></div>
 <div class="modal" id="md"><div class="sheet">
  <h2 id="mt"></h2>
@@ -158,26 +159,29 @@ function mkBook(S){const T=[["Date","Type","Category","Sub-category","Credit","D
  T.push(["","","Total","",S.s.i,S.s.e,S.close,"",""]);
  const w=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(T);ws["!cols"]=[{wch:12},{wch:9},{wch:22},{wch:26},{wch:12},{wch:12},{wch:14},{wch:18},{wch:30}];XLSX.utils.book_append_sheet(w,ws,"Statement");return w}
 let SF=null;try{SF=window.Capacitor&&Capacitor.registerPlugin("SaveFile")}catch(e){}
+let tnT=null;function notify(m){const t=$("tn");t.textContent=m;t.style.display="block";clearTimeout(tnT);tnT=setTimeout(()=>t.style.display="none",4000);try{if(SF)SF.toast({text:m}).catch(()=>{})}catch(e){}}
+function fbase(){const n=new Date(),p=v=>String(v).padStart(2,"0");return((fam||"Tracker").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,"")||"Tracker")+"_"+p(n.getDate())+p(n.getMonth()+1)+n.getFullYear()+p(n.getHours())+p(n.getMinutes())+p(n.getSeconds())}
 async function saveRaw(fn,b64,mime,el){
- try{const P=window.Capacitor&&Capacitor.Plugins;el.style.wordBreak="break-all";
-  if(SF&&P){try{const r=await SF.save({name:fn,data:b64,mime});el.innerHTML="Saved to:<br><b>"+esc(r.path)+"</b>";try{if(P.Share)await P.Share.share({title:fn,url:r.uri,dialogTitle:"Open, save or share"})}catch(e){}return}catch(e){}}
+ const P=window.Capacitor&&Capacitor.Plugins;el.style.wordBreak="break-all";let perr="";
+ try{
+  if(SF&&P){try{const r=await SF.save({name:fn,data:b64,mime});el.innerHTML="Saved to:<br><b>"+esc(r.path)+"</b>";notify("Saved: "+r.path);return}catch(e){perr=String(e&&e.message||e)}}
   if(P&&P.Filesystem){let f=null,where="";
    for(const dir of ["DOCUMENTS","EXTERNAL","CACHE"]){try{f=await P.Filesystem.writeFile({path:dir=="DOCUMENTS"?"ExpenseTracker/"+fn:fn,data:b64,directory:dir,recursive:true});where=dir;break}catch(e){}}
    if(!f)throw 0;
-   el.innerHTML="Saved to:<br><b>"+esc(decodeURIComponent(f.uri.replace("file://","")))+"</b>"+(where=="CACHE"?"<br>(temporary file - use Share to keep it)":"");
-   if(P.Share){try{await P.Share.share({title:fn,url:f.uri,dialogTitle:"Open, save or share"})}catch(e){}}}
-  else{const bl=new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:mime}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=fn;document.body.appendChild(a);a.click();a.remove();el.textContent="Downloaded. Check your browser's Downloads folder: "+fn}}
- catch(e){el.textContent="Could not save the file. Try again."}}
+   const pth=decodeURIComponent(f.uri.replace("file://",""));
+   el.innerHTML="Saved to:<br><b>"+esc(pth)+"</b>"+(where=="CACHE"?"<br>(temporary file)":"")+(perr?"<br>Documents folder not used: "+esc(perr):"");notify("Saved (app folder): "+fn)}
+  else{const bl=new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:mime}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=fn;document.body.appendChild(a);a.click();a.remove();el.textContent="Downloaded. Check your browser's Downloads folder: "+fn;notify("Downloaded: "+fn)}}
+ catch(e){el.textContent="Could not save the file. "+perr;notify("Export failed")}}
 const XM="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const saveWb=(w,fn,el)=>saveRaw(fn,XLSX.write(w,{type:"base64",bookType:"xlsx"}),XM,el);
-$("bx").onclick=()=>{const m=$("bm").value;if(!m){$("bmsg").textContent="Choose a month first.";return}
- const S=stmt(m+"-01",m+"-31");if(!S.rows.length){$("bmsg").textContent="No entries in this month.";return}saveWb(mkBook(S),"expense-data-"+m+".xlsx",$("bmsg"))};
-$("ba").onclick=()=>{if(!data.length){$("bmsg").textContent="No entries to export.";return}saveWb(mkBook(stmt("","")),"expense-data-all.xlsx",$("bmsg"))};
+$("bx").onclick=()=>{notify("Exporting month data...");const m=$("bm").value;if(!m){$("bmsg").textContent="Choose a month first.";return}
+ const S=stmt(m+"-01",m+"-31");if(!S.rows.length){$("bmsg").textContent="No entries in this month.";return}saveWb(mkBook(S),fbase()+".xlsx",$("bmsg"))};
+$("ba").onclick=()=>{notify("Exporting all data...");if(!data.length){$("bmsg").textContent="No entries to export.";return}saveWb(mkBook(stmt("","")),fbase()+".xlsx",$("bmsg"))};
 async function makePdf(f,t,el){
+ notify("Creating PDF report...");
  if(!(window.jspdf&&window.jspdf.jsPDF)){el.textContent="PDF library not loaded.";return}
  const S=stmt(f,t),doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),n=new Date(),p2=v=>String(v).padStart(2,"0");
- const stamp=p2(n.getDate())+p2(n.getMonth()+1)+n.getFullYear()+p2(n.getHours())+p2(n.getMinutes())+p2(n.getSeconds());
- const nm=((fam||"Tracker").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,""))||"Tracker",base=nm+"_"+stamp;
+ const base=fbase();
  const ttl=(fam||"Family").replace(/[^\x20-\x7E]/g,"").trim()||"Family";
  doc.setFontSize(14);doc.text("Expense Statement - "+ttl,14,16);doc.setFontSize(9);doc.text("Period: "+fmtD(f)+" to "+fmtD(t)+"   (Amounts in Rs.)",14,22);
  const body=[[fmtD(f),"","Previous balance","","","",m2(S.open)]];
@@ -191,7 +195,7 @@ async function makePdf(f,t,el){
  for(let i=1;i<=N;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(90);doc.text(base,14,H-8);doc.text("Page "+i+" of "+N,W/2,H-8,{align:"center"});doc.text("@Prakash Pawar Ver 1.4",W-14,H-8,{align:"right"})}
  await saveRaw(base+".pdf",doc.output("datauristring").split("base64,")[1],"application/pdf",el)}
 $("bimp").onclick=()=>$("bf").click();
-$("bf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const pad=n=>String(n).padStart(2,"0");
+$("bf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;notify("Importing "+f.name+"...");const pad=n=>String(n).padStart(2,"0");
  try{const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}),ws=wb.Sheets["Statement"]||wb.Sheets["Transactions"]||wb.Sheets[wb.SheetNames[0]];
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true}),hi=rows.findIndex(r=>r&&String(r[0]).trim()=="Date");if(hi<0)throw 0;
   const H={};rows[hi].forEach((h,i)=>H[String(h).trim().toLowerCase()]=i);const g=(r,k)=>H[k]===undefined?undefined:r[H[k]];
@@ -204,8 +208,8 @@ $("bf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)ret
    const d=nd(g(r,"date"));if(!t||!d||!(a>0)||!cat){bad++;return}
    const x={id:Date.now()+(k++),t,d,c:cat,s:String(g(r,"sub-category")||"").trim(),p:String(g(r,"payment option")||"Other").trim(),a,n:String(g(r,"note")||"").trim()};
    if(have.has(key(x))){dup++;return}have.add(key(x));data.push(x);add++});
-  sv("ext_data",data);render();$("bmsg").textContent="Imported "+add+" entries"+(dup?", skipped "+dup+" already present":"")+(bad?", ignored "+bad+" invalid rows":"")+"."}
- catch(err){$("bmsg").textContent="Could not read that file. Use an Excel file exported from this app."}};
+  sv("ext_data",data);render();$("bmsg").textContent="Imported "+add+" entries"+(dup?", skipped "+dup+" already present":"")+(bad?", ignored "+bad+" invalid rows":"")+".";notify($("bmsg").textContent)}
+ catch(err){$("bmsg").textContent="Could not read that file. Use an Excel file exported from this app.";notify("Import failed")}};
 $("bl").onclick=()=>$("em").classList.add("on");$("ec").onclick=()=>$("em").classList.remove("on");
 let rep=null;
 $("mk").onclick=()=>{const f=$("rf").value,t=$("rt").value;if(!f||!t||f>t){$("rout").innerHTML='<div class="empty">Choose a start date that is on or before the end date.</div>';return}
