@@ -60,18 +60,19 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 <div class="card"><h2 style="font-size:14px;margin-bottom:6px" id="gt"></h2><div id="chart"></div>
  <div class="legend"><span><i style="background:var(--inc)"></i>Income</span><span><i style="background:var(--exp)"></i>Expense</span><span>Tap a month to open it</span></div></div>
 <div class="acts"><button id="bi">+ Income</button><button id="be">+ Expense</button></div>
-<div class="card"><h2 style="font-size:14px;margin-bottom:6px">Entries this month</h2><div id="list"></div></div>
+<button class="go" id="bl" style="margin:0 0 8px;background:var(--card);color:var(--ink);border:1px solid var(--line)">Entries this month</button>
 <div class="card rep"><h2 style="font-size:14px">Make report</h2>
  <div class="row"><div><label>From</label><input type="date" id="rf"></div><div><label>To</label><input type="date" id="rt"></div></div>
  <button class="go" id="mk">Make report</button><div id="rout"></div></div>
 
-<footer style="text-align:center;color:var(--mut);font-size:12px;padding:14px 0 0">@Prakash Pawar Ver 1.3</footer>
+<footer style="text-align:center;color:var(--mut);font-size:12px;padding:14px 0 0">@Prakash Pawar Ver 1.4</footer>
 <div class="bar"><span>Balance (this month)</span><span id="bb"></span></div>
 <div class="card"><h2 style="font-size:14px">Import &amp; Export data</h2>
  <label>Month</label><input type="month" id="bm" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--bg)">
  <div class="row" style="margin-top:8px"><button class="go" id="bx" style="margin-top:0">Export month</button><button class="go" id="ba" style="margin-top:0">Export all</button></div>
  <button class="go" id="bimp" style="background:none;color:var(--ink);border:1px solid var(--line)">Import from Excel</button>
  <input type="file" id="bf" accept=".xlsx,.xls" hidden><div id="bmsg" class="empty" style="word-break:break-all"></div></div>
+<div class="modal" id="em"><div class="sheet" style="min-height:60%"><div class="mon"><h2 id="et" style="font-size:15px"></h2><button class="ghost" id="ec">Close</button></div><div id="list" style="margin-top:6px"></div></div></div>
 <div class="modal" id="md"><div class="sheet">
  <h2 id="mt"></h2>
  <label>Date</label><input type="date" id="fd">
@@ -84,6 +85,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 </div></div>
 
 <script src="xlsx.full.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script src="jspdf.plugin.autotable.min.js"></script>
 <script>
 const EXP={"Children":["Extracurricular activities","Medical","School/College supplies","School/College tuition"],
 "Food":["Dining out","Groceries","Orders","Other"],
@@ -112,7 +115,7 @@ function render(){
  $("fam").textContent=(fam||"Family")+(fam?"'s family":"");
  const y=cur.getFullYear(),m=cur.getMonth(),last=new Date(y,m+1,0).getDate(),pre=y+"-"+String(m+1).padStart(2,"0");
  $("rng").textContent="1st "+M[m]+" to "+last+(last==1?"":"")+" "+M[m]+" "+y;
- $("bm").value=pre;const ml=data.filter(t=>t.d.startsWith(pre)),s=sums(ml);
+ $("bm").value=pre;$("et").textContent="Entries - "+M[m]+" "+y;const ml=data.filter(t=>t.d.startsWith(pre)),s=sums(ml);
  $("ti").textContent=inr(s.i);$("te").textContent=inr(s.e);
  $("tb").textContent=inr(s.i-s.e);$("tb").className=s.i-s.e>=0?"pos":"neg";$("bb").textContent=inr(s.i-s.e);$("bb").className=s.i-s.e>=0?"pos":"neg";
  $("gt").textContent="Month-wise income and expense, "+y;
@@ -122,6 +125,7 @@ function render(){
   g+=`<g data-m="${k}" style="cursor:pointer"><rect x="${X-4}" y="0" width="27" height="150" fill="${k==m?"var(--line)":"transparent"}" opacity=".5"/><rect x="${X}" y="${125-hi}" width="9" height="${hi}" rx="1.5" fill="var(--inc)"/><rect x="${X+10}" y="${125-he}" width="9" height="${he}" rx="1.5" fill="var(--exp)"/><text x="${X+9.5}" y="142" text-anchor="middle">${M[k]}</text></g>`});
  $("chart").innerHTML=`<svg viewBox="0 0 332 150" width="100%" role="img" aria-label="Monthly income and expense bars"><line x1="0" y1="125" x2="332" y2="125" stroke="var(--line)"/>${g}</svg>`;
  $("chart").querySelectorAll("g").forEach(el=>el.onclick=()=>{cur.setMonth(+el.dataset.m);render()});
+ $("bl").textContent="Entries this month ("+ml.length+")";
  ml.sort((a,b)=>b.d.localeCompare(a.d)||b.id-a.id);
  $("list").innerHTML=ml.length?ml.map(t=>`<div class="tx"><div>${esc(t.c)}${t.s?" › "+esc(t.s):""}<small>${fmtD(t.d)}${t.n?" · "+esc(t.n):""}</small></div><div><div class="amt ${t.t=="I"?"pos":"neg"}">${t.t=="I"?"+":"−"}${inr(t.a)}</div><button data-d="${t.id}">Delete</button></div></div>`).join(""):'<div class="empty">No entries this month. Tap + Income or + Expense to add one.</div>';
  $("list").querySelectorAll("button").forEach(b=>b.onclick=()=>{if(confirm("Delete this entry?")){data=data.filter(t=>t.id!=b.dataset.d);sv("ext_data",data);render()}});
@@ -145,32 +149,62 @@ $("sv").onclick=()=>{const a=parseFloat($("fa").value);if(!(a>0)){$("fa").focus(
 $("pv").onclick=()=>{cur.setMonth(cur.getMonth()-1);render()};$("nx").onclick=()=>{cur.setMonth(cur.getMonth()+1);render()};
 $("ren").onclick=()=>{const n=prompt("Name of user (family head):",fam);if(n!==null){fam=n.trim();sv("ext_fam",fam);render()}};
 $("ex").onclick=()=>{if(!confirm("Exit the app?"))return;const P=window.Capacitor&&Capacitor.Plugins;if(P&&P.App){P.App.exitApp()}else{window.close();setTimeout(()=>alert("Close this tab to exit."),300)}};
-function mkBook(L){const T=[["Date","Type","Category","Sub-category","Payment option","Amount","Note"]].concat(L.map(x=>[x.d,x.t=="I"?"Income":"Expense",x.c,x.s,x.p,x.a,x.n]));
- const w=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(T);ws["!cols"]=[{wch:12},{wch:9},{wch:22},{wch:26},{wch:20},{wch:12},{wch:30}];XLSX.utils.book_append_sheet(w,ws,"Transactions");return w}
-async function saveWb(w,fn,el){
- try{const P=window.Capacitor&&Capacitor.Plugins;
-  if(P&&P.Filesystem){const b64=XLSX.write(w,{type:"base64",bookType:"xlsx"});let f=null,where="";
+const srt=L=>L.sort((a,b)=>a.d.localeCompare(b.d)||a.id-b.id);
+const m2=v=>Number(v).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+function stmt(from,to){let open=0;if(from){const o=sums(data.filter(x=>x.d<from));open=o.i-o.e}
+ const L=srt(data.filter(x=>(!from||x.d>=from)&&(!to||x.d<=to)));let b=open;const rows=L.map(x=>{b+=x.t=="I"?x.a:-x.a;return{x,b}});return{open,rows,s:sums(L),close:b}}
+function mkBook(S){const T=[["Date","Type","Category","Sub-category","Credit","Debit","Balance","Payment option","Note"],["","","Opening balance","","","",S.open,"",""]];
+ S.rows.forEach(({x,b})=>T.push([x.d,x.t=="I"?"Income":"Expense",x.c,x.s,x.t=="I"?x.a:"",x.t=="E"?x.a:"",b,x.p,x.n]));
+ T.push(["","","Total","",S.s.i,S.s.e,S.close,"",""]);
+ const w=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(T);ws["!cols"]=[{wch:12},{wch:9},{wch:22},{wch:26},{wch:12},{wch:12},{wch:14},{wch:18},{wch:30}];XLSX.utils.book_append_sheet(w,ws,"Statement");return w}
+async function saveRaw(fn,b64,mime,el){
+ try{const P=window.Capacitor&&Capacitor.Plugins;el.style.wordBreak="break-all";
+  if(P&&P.Filesystem){let f=null,where="";
    for(const dir of ["DOCUMENTS","EXTERNAL","CACHE"]){try{f=await P.Filesystem.writeFile({path:dir=="DOCUMENTS"?"ExpenseTracker/"+fn:fn,data:b64,directory:dir,recursive:true});where=dir;break}catch(e){}}
    if(!f)throw 0;
    el.innerHTML="Saved to:<br><b>"+esc(decodeURIComponent(f.uri.replace("file://","")))+"</b>"+(where=="CACHE"?"<br>(temporary file - use Share to keep it)":"");
    if(P.Share){try{await P.Share.share({title:fn,url:f.uri,dialogTitle:"Open, save or share"})}catch(e){}}}
-  else{const bl=new Blob([XLSX.write(w,{type:"array",bookType:"xlsx"})],{type:"application/octet-stream"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=fn;document.body.appendChild(a);a.click();a.remove();el.textContent="Downloaded. Check your browser's Downloads folder: "+fn}}
+  else{const bl=new Blob([Uint8Array.from(atob(b64),c=>c.charCodeAt(0))],{type:mime}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=fn;document.body.appendChild(a);a.click();a.remove();el.textContent="Downloaded. Check your browser's Downloads folder: "+fn}}
  catch(e){el.textContent="Could not save the file. Try again."}}
-const srt=L=>L.sort((a,b)=>a.d.localeCompare(b.d)||a.id-b.id);
+const XM="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const saveWb=(w,fn,el)=>saveRaw(fn,XLSX.write(w,{type:"base64",bookType:"xlsx"}),XM,el);
 $("bx").onclick=()=>{const m=$("bm").value;if(!m){$("bmsg").textContent="Choose a month first.";return}
- const L=srt(data.filter(x=>x.d.startsWith(m)));if(!L.length){$("bmsg").textContent="No entries in this month.";return}saveWb(mkBook(L),"expense-data-"+m+".xlsx",$("bmsg"))};
-$("ba").onclick=()=>{if(!data.length){$("bmsg").textContent="No entries to export.";return}saveWb(mkBook(srt(data.slice())),"expense-data-all.xlsx",$("bmsg"))};
+ const S=stmt(m+"-01",m+"-31");if(!S.rows.length){$("bmsg").textContent="No entries in this month.";return}saveWb(mkBook(S),"expense-data-"+m+".xlsx",$("bmsg"))};
+$("ba").onclick=()=>{if(!data.length){$("bmsg").textContent="No entries to export.";return}saveWb(mkBook(stmt("","")),"expense-data-all.xlsx",$("bmsg"))};
+async function makePdf(f,t,el){
+ if(!(window.jspdf&&window.jspdf.jsPDF)){el.textContent="PDF library not loaded.";return}
+ const S=stmt(f,t),doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),n=new Date(),p2=v=>String(v).padStart(2,"0");
+ const stamp=p2(n.getDate())+p2(n.getMonth()+1)+n.getFullYear()+p2(n.getHours())+p2(n.getMinutes())+p2(n.getSeconds());
+ const nm=((fam||"Tracker").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_+|_+$/g,""))||"Tracker",base=nm+"_"+stamp;
+ const ttl=(fam||"Family").replace(/[^\x20-\x7E]/g,"").trim()||"Family";
+ doc.setFontSize(14);doc.text("Expense Statement - "+ttl,14,16);doc.setFontSize(9);doc.text("Period: "+fmtD(f)+" to "+fmtD(t)+"   (Amounts in Rs.)",14,22);
+ const body=[[fmtD(f),"","Previous balance","","","",m2(S.open)]];
+ S.rows.forEach(({x,b})=>body.push([fmtD(x.d),x.t=="I"?"Income":"Expense",x.c,x.s,x.t=="I"?m2(x.a):"",x.t=="E"?m2(x.a):"",m2(b)]));
+ body.push(["","","Total","",m2(S.s.i),m2(S.s.e),m2(S.close)]);
+ doc.autoTable({startY:26,margin:{left:14,right:14,bottom:16},theme:"grid",head:[["Date","Type","Category","Sub category","Credit","Debit","Balance"]],body,
+  styles:{fontSize:8,cellPadding:1.6},headStyles:{fillColor:[18,48,43],textColor:255},
+  columnStyles:{0:{cellWidth:22},1:{cellWidth:16},4:{halign:"right",cellWidth:24},5:{halign:"right",cellWidth:24},6:{halign:"right",cellWidth:27}},
+  didParseCell(d){if(d.section=="body"){if(d.row.index==0||d.row.index==body.length-1)d.cell.styles.fontStyle="bold";if(d.column.index==6&&String(d.cell.raw).startsWith("-"))d.cell.styles.textColor=[200,30,30]}}});
+ const N=doc.getNumberOfPages(),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+ for(let i=1;i<=N;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(90);doc.text(base,14,H-8);doc.text("Page "+i+" of "+N,W/2,H-8,{align:"center"});doc.text("@Prakash Pawar Ver 1.4",W-14,H-8,{align:"right"})}
+ await saveRaw(base+".pdf",doc.output("datauristring").split("base64,")[1],"application/pdf",el)}
 $("bimp").onclick=()=>$("bf").click();
 $("bf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const pad=n=>String(n).padStart(2,"0");
- try{const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}),ws=wb.Sheets["Transactions"]||wb.Sheets[wb.SheetNames[0]];
-  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});const nd=v=>{if(typeof v=="number"){const o=XLSX.SSF.parse_date_code(v);return o?o.y+"-"+pad(o.m)+"-"+pad(o.d):""}const t=String(v||"").trim();return /^\d{4}-\d{2}-\d{2}$/.test(t)?t:""};
+ try{const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}),ws=wb.Sheets["Statement"]||wb.Sheets["Transactions"]||wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true}),hi=rows.findIndex(r=>r&&String(r[0]).trim()=="Date");if(hi<0)throw 0;
+  const H={};rows[hi].forEach((h,i)=>H[String(h).trim().toLowerCase()]=i);const g=(r,k)=>H[k]===undefined?undefined:r[H[k]];
+  const nd=v=>{if(typeof v=="number"){const o=XLSX.SSF.parse_date_code(v);return o?o.y+"-"+pad(o.m)+"-"+pad(o.d):""}const t=String(v||"").trim();return /^\d{4}-\d{2}-\d{2}$/.test(t)?t:""};
   const key=x=>[x.d,x.t,x.c,x.s,x.p,x.a,x.n].join("|"),have=new Set(data.map(key));let add=0,dup=0,bad=0,k=0;
-  rows.forEach(r=>{if(!r||String(r[0]).trim()=="Date")return;const ty=String(r[1]||"").toLowerCase(),t=ty[0]=="i"?"I":ty[0]=="e"?"E":"",d=nd(r[0]),a=parseFloat(r[5]);
-   if(!t||!d||!(a>0)||!r[2]){if(r.some(v=>v!==undefined&&v!==""))bad++;return}
-   const x={id:Date.now()+(k++),t,d,c:String(r[2]).trim(),s:String(r[3]||"").trim(),p:String(r[4]||"Other").trim(),a,n:String(r[6]||"").trim()};
+  rows.slice(hi+1).forEach(r=>{if(!r||!r.some(v=>v!==undefined&&v!==""))return;const cat=String(g(r,"category")||"").trim();
+   if(/^(opening|total)/i.test(cat))return;
+   let t="",a=NaN;const cr=parseFloat(g(r,"credit")),db=parseFloat(g(r,"debit"));
+   if(cr>0){t="I";a=cr}else if(db>0){t="E";a=db}else{a=parseFloat(g(r,"amount"));const ty=String(g(r,"type")||"").toLowerCase();t=ty[0]=="i"?"I":ty[0]=="e"?"E":""}
+   const d=nd(g(r,"date"));if(!t||!d||!(a>0)||!cat){bad++;return}
+   const x={id:Date.now()+(k++),t,d,c:cat,s:String(g(r,"sub-category")||"").trim(),p:String(g(r,"payment option")||"Other").trim(),a,n:String(g(r,"note")||"").trim()};
    if(have.has(key(x))){dup++;return}have.add(key(x));data.push(x);add++});
   sv("ext_data",data);render();$("bmsg").textContent="Imported "+add+" entries"+(dup?", skipped "+dup+" already present":"")+(bad?", ignored "+bad+" invalid rows":"")+"."}
  catch(err){$("bmsg").textContent="Could not read that file. Use an Excel file exported from this app."}};
+$("bl").onclick=()=>$("em").classList.add("on");$("ec").onclick=()=>$("em").classList.remove("on");
 let rep=null;
 $("mk").onclick=()=>{const f=$("rf").value,t=$("rt").value;if(!f||!t||f>t){$("rout").innerHTML='<div class="empty">Choose a start date that is on or before the end date.</div>';return}
  const L=data.filter(x=>x.d>=f&&x.d<=t).sort((a,b)=>a.d.localeCompare(b.d)),s=sums(L);
@@ -182,28 +216,8 @@ $("mk").onclick=()=>{const f=$("rf").value,t=$("rt").value;if(!f||!t||f>t){$("ro
  Object.keys(cat).forEach(c=>{h+=`<tr class="cat"><td>${esc(c)}</td><td>${inr(cat[c].a)}</td></tr>`;Object.keys(cat[c].s).forEach(k=>h+=`<tr class="sub"><td>${esc(k)}</td><td>${inr(cat[c].s[k])}</td></tr>`)});
  if(!Object.keys(cat).length)h+=`<tr><td colspan=2 class="empty">No expenses in this range.</td></tr>`;
  h+=`</table><p style="margin:12px 0 2px"><b>Income by type</b></p><table class="tbl">`+(Object.keys(inc).map(k=>`<tr><td>${esc(k)}</td><td>${inr(inc[k])}</td></tr>`).join("")||`<tr><td colspan=2 class="empty">No income in this range.</td></tr>`)+`</table>`;
- h+=`<button class="go" id="xl">Export to Excel</button><div id="xm" class="empty"></div>`;
- $("rout").innerHTML=h;$("xl").onclick=exportXl};
-async function exportXl(){
- const r=rep;if(!r)return;const w=XLSX.utils.book_new();
- const S=[["Personal Expense Tracker"],["User (Family Head)",fam],["Period",fmtD(r.f)+" to "+fmtD(r.t)],[],["Total income",r.s.i],["Total expense",r.s.e],["Balance",r.s.i-r.s.e],[],["Expense category","Sub-category","Amount"]];
- Object.keys(r.cat).forEach(c=>{S.push([c,"",r.cat[c].a]);Object.keys(r.cat[c].s).forEach(k=>S.push(["",k,r.cat[c].s[k]]))});
- S.push([],["Income type","","Amount"]);Object.keys(r.inc).forEach(k=>S.push([k,"",r.inc[k]]));
- S.push([],["Payment option","Income","Expense"]);Object.keys(r.pay).forEach(k=>S.push([k,r.pay[k].i,r.pay[k].e]));
- const ws=XLSX.utils.aoa_to_sheet(S);ws["!cols"]=[{wch:26},{wch:26},{wch:16}];XLSX.utils.book_append_sheet(w,ws,"Summary");
- const T=[["Date","Type","Category","Sub-category","Payment option","Amount","Note"]].concat(r.L.map(x=>[x.d,x.t=="I"?"Income":"Expense",x.c,x.s,x.p,x.a,x.n]));
- const w2=XLSX.utils.aoa_to_sheet(T);w2["!cols"]=[{wch:12},{wch:9},{wch:22},{wch:26},{wch:20},{wch:12},{wch:30}];XLSX.utils.book_append_sheet(w,w2,"Transactions");
- const buf=XLSX.write(w,{type:"array",bookType:"xlsx"});
- const fn="expense-report-"+r.f+"-to-"+r.t+".xlsx";
- try{const P=window.Capacitor&&Capacitor.Plugins;
-  if(P&&P.Filesystem){const b64=XLSX.write(w,{type:"base64",bookType:"xlsx"});let f=null,where="";
-   for(const dir of ["DOCUMENTS","EXTERNAL","CACHE"]){try{f=await P.Filesystem.writeFile({path:dir=="DOCUMENTS"?"ExpenseTracker/"+fn:fn,data:b64,directory:dir,recursive:true});where=dir;break}catch(e){}}
-   if(!f)throw 0;
-   const pth=decodeURIComponent(f.uri.replace("file://",""));
-   $("xm").style.wordBreak="break-all";$("xm").innerHTML="Saved to:<br><b>"+esc(pth)+"</b>"+(where=="CACHE"?"<br>(temporary file - use Share to keep it)":"");
-   if(P.Share){try{await P.Share.share({title:fn,url:f.uri,dialogTitle:"Open, save or share report"})}catch(e){}}}
-  else{const bl=new Blob([buf],{type:"application/octet-stream"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=fn;document.body.appendChild(a);a.click();a.remove();$("xm").textContent="Downloaded. Check your browser's Downloads folder: "+fn}}
- catch(e){$("xm").textContent="Could not save the file. Try again."}}
+ h+=`<div id="xm" class="empty">Creating PDF...</div>`;
+ $("rout").innerHTML=h;makePdf(f,t,$("xm"))};
 const td=iso(new Date());$("rf").value=iso(new Date(cur.getFullYear(),cur.getMonth(),1));$("rt").value=td;
 render();if(!fam)setTimeout(()=>$("ren").click(),300);
 </script></body></html>
