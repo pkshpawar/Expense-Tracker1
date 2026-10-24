@@ -86,8 +86,6 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 </div></div>
 
 <script src="xlsx.full.min.js"></script>
-<script src="jspdf.umd.min.js"></script>
-<script src="jspdf.plugin.autotable.min.js"></script>
 <script>
 const EXP={"Children":["Extracurricular activities","Medical","School/College supplies","School/College tuition"],
 "Food":["Dining out","Groceries","Orders","Other"],
@@ -177,23 +175,33 @@ const saveWb=(w,fn,el)=>saveRaw(fn,XLSX.write(w,{type:"base64",bookType:"xlsx"})
 $("bx").onclick=()=>{notify("Exporting month data...");const m=$("bm").value;if(!m){$("bmsg").textContent="Choose a month first.";return}
  const S=stmt(m+"-01",m+"-31");if(!S.rows.length){$("bmsg").textContent="No entries in this month.";return}saveWb(mkBook(S),fbase()+".xlsx",$("bmsg"))};
 $("ba").onclick=()=>{notify("Exporting all data...");if(!data.length){$("bmsg").textContent="No entries to export.";return}saveWb(mkBook(stmt("","")),fbase()+".xlsx",$("bmsg"))};
+function buildPdf(title,sub,rows,base,ver){
+ const cols=[["Date",62,"l"],["Type",44,"l"],["Category",98,"l"],["Sub category",98,"l"],["Credit",70,"r"],["Debit",70,"r"],["Balance",73,"r"]],X0=40,RH=15,heads=cols.map(c=>c[0]),pages=[];let ops,y;
+ const T=v=>String(v).replace(/[^\x20-\x7E]/g,"?");
+ const tw=(str,sz)=>{let w=0;for(const ch of str)w+=/[0-9]/.test(ch)?.556:/[A-Z]/.test(ch)?.68:ch==" "?.278:/[,.:;'|!il]/.test(ch)?.28:/[mw]/.test(ch)?.8:.52;return w*sz};
+ const fit=(str,w,sz)=>{str=T(str);if(tw(str,sz)<=w-6)return str;while(str.length>1&&tw(str+"..",sz)>w-6)str=str.slice(0,-1);return str+".."};
+ const txt=(x,yy,str,sz,bold,rgb)=>ops.push("BT /"+(bold?"F2":"F1")+" "+sz+" Tf "+(rgb||"0 0 0")+" rg "+x.toFixed(1)+" "+yy.toFixed(1)+" Td ("+str.replace(/[\\()]/g,"\\$&")+") Tj ET");
+ const row=(cells,hdr,bold)=>{let x=X0;cols.forEach((c,i)=>{if(hdr)ops.push("0.07 0.19 0.17 rg "+x+" "+(y-RH)+" "+c[1]+" "+RH+" re f");
+  ops.push("0.6 G 0.5 w "+x+" "+(y-RH)+" "+c[1]+" "+RH+" re S");const v=fit(cells[i],c[1],8),w=tw(v,8),tx=c[2]=="r"?x+c[1]-3-w:x+3;
+  txt(tx,y-10.5,v,8,hdr||bold,hdr?"1 1 1":(i==6&&v[0]=="-")?"0.78 0.12 0.12":"0 0 0");x+=c[1]});y-=RH};
+ const page=first=>{ops=[];pages.push(ops);if(first){txt(X0,808,fit(title,515,14).replace(/\.\.$/,""),14,true);txt(X0,792,T(sub),9,false);y=778}else y=802;row(heads,true)};
+ page(true);rows.forEach((r,i)=>{if(y-RH<50)page(false);row(r.map(String),false,i==0||i==rows.length-1)});
+ const N=pages.length;pages.forEach((o,i)=>{ops=o;const g="0.35 0.35 0.35",pg="Page "+(i+1)+" of "+N,vv=T(ver);txt(X0,26,T(base),8,false,g);txt(297.5-tw(pg,8)/2,26,pg,8,false,g);txt(555-tw(vv,8),26,vv,8,false,g)});
+ const objs=[];objs[1]="<</Type/Catalog/Pages 2 0 R>>";const kids=pages.map((_,i)=>(5+i*2)+" 0 R");
+ objs[2]="<</Type/Pages/Kids["+kids.join(" ")+"]/Count "+N+">>";
+ objs[3]="<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>";objs[4]="<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>";
+ pages.forEach((o,i)=>{const c=o.join("\n");objs[5+i*2]="<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 3 0 R/F2 4 0 R>>>>/Contents "+(6+i*2)+" 0 R>>";objs[6+i*2]="<</Length "+c.length+">>\nstream\n"+c+"\nendstream"});
+ let out="%PDF-1.4\n";const off=[];for(let i=1;i<objs.length;i++){off[i]=out.length;out+=i+" 0 obj\n"+objs[i]+"\nendobj\n"}
+ const xr=out.length;out+="xref\n0 "+objs.length+"\n0000000000 65535 f \n"+off.slice(1).map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("")+"trailer\n<</Size "+objs.length+"/Root 1 0 R>>\nstartxref\n"+xr+"\n%%EOF";
+ return btoa(out)}
 async function makePdf(f,t,el){
  notify("Creating PDF report...");
- if(!(window.jspdf&&window.jspdf.jsPDF)){el.textContent="PDF library not loaded.";return}
- const S=stmt(f,t),doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"}),n=new Date(),p2=v=>String(v).padStart(2,"0");
- const base=fbase();
- const ttl=(fam||"Family").replace(/[^\x20-\x7E]/g,"").trim()||"Family";
- doc.setFontSize(14);doc.text("Expense Statement - "+ttl,14,16);doc.setFontSize(9);doc.text("Period: "+fmtD(f)+" to "+fmtD(t)+"   (Amounts in Rs.)",14,22);
+ const S=stmt(f,t),base=fbase(),ttl=(fam||"Family").replace(/[^\x20-\x7E]/g,"").trim()||"Family";
  const body=[[fmtD(f),"","Previous balance","","","",m2(S.open)]];
  S.rows.forEach(({x,b})=>body.push([fmtD(x.d),x.t=="I"?"Income":"Expense",x.c,x.s,x.t=="I"?m2(x.a):"",x.t=="E"?m2(x.a):"",m2(b)]));
  body.push(["","","Total","",m2(S.s.i),m2(S.s.e),m2(S.close)]);
- doc.autoTable({startY:26,margin:{left:14,right:14,bottom:16},theme:"grid",head:[["Date","Type","Category","Sub category","Credit","Debit","Balance"]],body,
-  styles:{fontSize:8,cellPadding:1.6},headStyles:{fillColor:[18,48,43],textColor:255},
-  columnStyles:{0:{cellWidth:22},1:{cellWidth:16},4:{halign:"right",cellWidth:24},5:{halign:"right",cellWidth:24},6:{halign:"right",cellWidth:27}},
-  didParseCell(d){if(d.section=="body"){if(d.row.index==0||d.row.index==body.length-1)d.cell.styles.fontStyle="bold";if(d.column.index==6&&String(d.cell.raw).startsWith("-"))d.cell.styles.textColor=[200,30,30]}}});
- const N=doc.getNumberOfPages(),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
- for(let i=1;i<=N;i++){doc.setPage(i);doc.setFontSize(8);doc.setTextColor(90);doc.text(base,14,H-8);doc.text("Page "+i+" of "+N,W/2,H-8,{align:"center"});doc.text("@Prakash Pawar Ver 1.4",W-14,H-8,{align:"right"})}
- await saveRaw(base+".pdf",doc.output("datauristring").split("base64,")[1],"application/pdf",el)}
+ try{await saveRaw(base+".pdf",buildPdf("Expense Statement - "+ttl,"Period: "+fmtD(f)+" to "+fmtD(t)+"   (Amounts in Rs.)",body,base,"@Prakash Pawar Ver 1.4"),"application/pdf",el)}
+ catch(e){el.textContent="PDF could not be created.";notify("PDF failed")}}
 $("bimp").onclick=()=>$("bf").click();
 $("bf").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;notify("Importing "+f.name+"...");const pad=n=>String(n).padStart(2,"0");
  try{const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}),ws=wb.Sheets["Statement"]||wb.Sheets["Transactions"]||wb.Sheets[wb.SheetNames[0]];
