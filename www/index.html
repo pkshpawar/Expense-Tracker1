@@ -157,8 +157,10 @@ function mkBook(S){const T=[["Date","Type","Category","Sub-category","Credit","D
  S.rows.forEach(({x,b})=>T.push([x.d,x.t=="I"?"Income":"Expense",x.c,x.s,x.t=="I"?x.a:"",x.t=="E"?x.a:"",b,x.p,x.n]));
  T.push(["","","Total","",S.s.i,S.s.e,S.close,"",""]);
  const w=XLSX.utils.book_new(),ws=XLSX.utils.aoa_to_sheet(T);ws["!cols"]=[{wch:12},{wch:9},{wch:22},{wch:26},{wch:12},{wch:12},{wch:14},{wch:18},{wch:30}];XLSX.utils.book_append_sheet(w,ws,"Statement");return w}
+let SF=null;try{SF=window.Capacitor&&Capacitor.registerPlugin("SaveFile")}catch(e){}
 async function saveRaw(fn,b64,mime,el){
  try{const P=window.Capacitor&&Capacitor.Plugins;el.style.wordBreak="break-all";
+  if(SF&&P){try{const r=await SF.save({name:fn,data:b64,mime});el.innerHTML="Saved to:<br><b>"+esc(r.path)+"</b>";try{if(P.Share)await P.Share.share({title:fn,url:r.uri,dialogTitle:"Open, save or share"})}catch(e){}return}catch(e){}}
   if(P&&P.Filesystem){let f=null,where="";
    for(const dir of ["DOCUMENTS","EXTERNAL","CACHE"]){try{f=await P.Filesystem.writeFile({path:dir=="DOCUMENTS"?"ExpenseTracker/"+fn:fn,data:b64,directory:dir,recursive:true});where=dir;break}catch(e){}}
    if(!f)throw 0;
